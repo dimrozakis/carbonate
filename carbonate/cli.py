@@ -7,6 +7,8 @@ import sys
 
 from time import time
 
+import whisper
+
 from .aggregation import setAggregation, AGGREGATION
 from .fill import fill_archives
 from .list import listMetrics
@@ -163,7 +165,20 @@ def carbon_sync():
         help='Pass option(s) to rsync. Make sure to use ' +
         '"--rsync-options=" if option starts with \'-\'')
 
+    parser.add_argument(
+        '--lock',
+        action='store_true',
+        help='Use exclusive flock when accessing whisper files'
+    )
+
     args = parser.parse_args()
+
+    if args.lock:
+        if whisper.CAN_LOCK:
+            whisper.LOCK = True
+        else:
+            raise SystemExit("Whisper locking is enabled but import of "
+                             "fcntl module failed.")
 
     logging.basicConfig(level=logging.INFO)
 
@@ -270,6 +285,12 @@ def whisper_fill():
         metavar='DST',
         help='Whisper destination file')
 
+    parser.add_argument(
+        '--lock',
+        action='store_true',
+        help='Use exclusive flock when accessing whisper files'
+    )
+
     args = parser.parse_args()
 
     src = args.source
@@ -280,6 +301,13 @@ def whisper_fill():
 
     if not os.path.isfile(dst):
         raise SystemExit('Destination file not found.')
+
+    if args.lock:
+        if whisper.CAN_LOCK:
+            whisper.LOCK = True
+        else:
+            raise SystemExit("Whisper locking is enabled but import of "
+                             "fcntl module failed.")
 
     startFrom = time()
 
